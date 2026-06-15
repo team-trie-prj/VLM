@@ -123,4 +123,4 @@ class OpenAIVLM(VLMBackend):
             max_tokens=8,
             messages=[{"role": "user", "content": "ping"}],
         )
-        return f"openai OK — model={self.model}, 키 인증/연결 정상"
+        return f"openai OK - model={self.model}, 키 인증/연결 정상"

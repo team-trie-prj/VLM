@@ -153,13 +153,13 @@ def build_parser() -> argparse.ArgumentParser:
         prog="vlm", description="멀티모달 VLM 이미지 이해 모듈"
     )
     p.add_argument("--config", help="설정 YAML 경로 (기본: config/default.yaml)")
-    p.add_argument("--backend", help="백엔드 강제 지정 (mock/anthropic/openai/qwen)")
+    p.add_argument("--backend", help="백엔드 강제 지정 (mock/gemini/anthropic/openai/qwen)")
     p.add_argument("--model", help="모델 강제 지정")
     sub = p.add_subparsers(dest="command", required=True)
 
-    a = sub.add_parser("analyze", help="이미지 1장 분석 → 메타데이터 JSON")
+    a = sub.add_parser("analyze", help="이미지 1장 분석 -> 메타데이터 JSON")
     a.add_argument("image", help="이미지 경로")
-    a.add_argument("--query", help="(선택) 자연어 질의 → 개념 프롬프트 동시 생성")
+    a.add_argument("--query", help="(선택) 자연어 질의 -> 개념 프롬프트 동시 생성")
     a.add_argument("--no-save", action="store_true", help="JSON 저장 안 함")
     a.set_defaults(func=cmd_analyze)
 
@@ -169,7 +169,7 @@ def build_parser() -> argparse.ArgumentParser:
     b.add_argument("--name", default="dataset", help="출력 데이터셋 파일명")
     b.set_defaults(func=cmd_batch)
 
-    q = sub.add_parser("query", help="자연어 질의 → 탐지 개념 프롬프트")
+    q = sub.add_parser("query", help="자연어 질의 -> 탐지 개념 프롬프트")
     q.add_argument("text", help="질의문 (예: '포트홀 찾아줘')")
     q.set_defaults(func=cmd_query)
 
@@ -189,6 +189,13 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv=None) -> int:
+    # 레거시 Windows 콘솔(cp949 등)에서 비-인코딩 문자가 print될 때 크래시하지 않도록
+    # 대체문자 처리로 전환(인코딩 자체는 유지 → 한글은 그대로 렌더링).
+    for _s in (sys.stdout, sys.stderr):
+        try:
+            _s.reconfigure(errors="replace")
+        except Exception:
+            pass
     args = build_parser().parse_args(argv)
     return args.func(args)
 

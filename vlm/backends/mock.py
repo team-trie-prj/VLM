@@ -104,7 +104,7 @@ class MockVLM(VLMBackend):
     def vqa(self, image_path: str, question: str) -> str:
         a = self.analyze_image(image_path)
         return (
-            f"[mock] Based on the image ({a.caption}) — "
+            f"[mock] Based on the image ({a.caption}) - "
             f"damage_present={a.damage_present}, "
             f"types={sorted({d.type for d in a.damages}) or 'none'}. "
             f"(Question was: {question})"

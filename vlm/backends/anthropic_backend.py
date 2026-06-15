@@ -74,12 +74,12 @@ class AnthropicVLM(VLMBackend):
         """SDK 예외를 사용자 친화 메시지로 변환."""
         if isinstance(e, self._anthropic.AuthenticationError):
             return RuntimeError(
-                "ANTHROPIC_API_KEY 인증 실패 — 키 값을 확인하세요(.env 또는 환경변수)."
+                "ANTHROPIC_API_KEY 인증 실패 - 키 값을 확인하세요(.env 또는 환경변수)."
             )
         if isinstance(e, self._anthropic.RateLimitError):
             return RuntimeError("요청 한도 초과(rate limit). 잠시 후 다시 시도하세요.")
         if isinstance(e, self._anthropic.APIConnectionError):
-            return RuntimeError("Anthropic API 연결 실패 — 네트워크를 확인하세요.")
+            return RuntimeError("Anthropic API 연결 실패 - 네트워크를 확인하세요.")
         return e
 
     # --- 공개 API ----------------------------------------------------------
@@ -167,4 +167,4 @@ class AnthropicVLM(VLMBackend):
             )
         except Exception as e:
             raise self._on_error(e) from e
-        return f"anthropic OK — model={self.model}, 키 인증/연결 정상"
+        return f"anthropic OK - model={self.model}, 키 인증/연결 정상"
