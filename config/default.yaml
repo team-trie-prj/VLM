@@ -2,14 +2,16 @@
 #
 # backend 선택:
 #   mock      - 키/GPU 불필요. 지금 바로 동작(파이프라인 검증용 기본값)
-#   anthropic - Claude 비전 API. ANTHROPIC_API_KEY 필요 (1순위 실행 백엔드)
-#   openai    - GPT-4o 비전 API. OPENAI_API_KEY 필요
+#   gemini    - Google Gemini 비전 API. 무료 티어. GEMINI_API_KEY 필요
+#   anthropic - Claude 비전 API. ANTHROPIC_API_KEY 필요(유료, 선불 크레딧)
+#   openai    - GPT-4o 비전 API. OPENAI_API_KEY 필요(유료)
 #   qwen      - 로컬 Qwen2.5-VL. NVIDIA GPU 권장 (requirements-local.txt 설치)
 #
 # 환경변수로도 덮어쓸 수 있음: VLM_BACKEND, VLM_MODEL
 backend: mock
 
 # model: 비워두면 백엔드별 기본 모델 사용
+#   gemini    기본: gemini-2.5-flash
 #   anthropic 기본: claude-opus-4-8   (비용 절감 시 claude-sonnet-4-6 / claude-haiku-4-5)
 #   openai    기본: gpt-4o
 #   qwen      기본: Qwen/Qwen2.5-VL-3B-Instruct  (GPU 여유 시 7B/32B)

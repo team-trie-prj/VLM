@@ -12,13 +12,14 @@ from typing import Optional
 from pydantic import ValidationError
 
 from ..keywords import keyword_parse_query
+from ..pricing import estimate_cost_usd
 from ..prompts import (
     ANALYZE_INSTRUCTION,
     ANALYZE_SYSTEM,
     PARSE_QUERY_SYSTEM,
     VQA_SYSTEM,
 )
-from ..schemas import ConceptPrompt, ImageAnalysis
+from ..schemas import ConceptPrompt, ImageAnalysis, Usage
 from .base import VLMBackend, image_data_url
 
 DEFAULT_MODEL = "gpt-4o"
@@ -48,6 +49,19 @@ class OpenAIVLM(VLMBackend):
     def _image_content(self, image_path: str) -> dict:
         return {"type": "image_url", "image_url": {"url": image_data_url(image_path)}}
 
+    def _record_usage(self, resp) -> None:
+        u = getattr(resp, "usage", None)
+        if u is None:
+            self.last_usage = None
+            return
+        inp = getattr(u, "prompt_tokens", 0) or 0
+        out = getattr(u, "completion_tokens", 0) or 0
+        self.last_usage = Usage(
+            input_tokens=inp,
+            output_tokens=out,
+            estimated_cost_usd=estimate_cost_usd(self.model, inp, out),
+        )
+
     def _json_call(self, system: str, user_content: list) -> str:
         resp = self._client.chat.completions.create(
             model=self.model,
@@ -58,6 +72,7 @@ class OpenAIVLM(VLMBackend):
                 {"role": "user", "content": user_content},
             ],
         )
+        self._record_usage(resp)
         return resp.choices[0].message.content or "{}"
 
     def analyze_image(
@@ -89,6 +104,7 @@ class OpenAIVLM(VLMBackend):
                 },
             ],
         )
+        self._record_usage(resp)
         return (resp.choices[0].message.content or "").strip()
 
     def parse_query(self, query: str) -> ConceptPrompt:
@@ -100,3 +116,11 @@ class OpenAIVLM(VLMBackend):
             return result
         except Exception:
             return keyword_parse_query(query)
+
+    def health_check(self) -> str:
+        self._client.chat.completions.create(
+            model=self.model,
+            max_tokens=8,
+            messages=[{"role": "user", "content": "ping"}],
+        )
+        return f"openai OK — model={self.model}, 키 인증/연결 정상"

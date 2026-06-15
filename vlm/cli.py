@@ -11,7 +11,9 @@
 from __future__ import annotations
 
 import argparse
+import importlib
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -57,6 +59,14 @@ def cmd_batch(args) -> int:
         f"처리 {len(results)}장 / {elapsed:.2f}s "
         f"(장당 {per * 1000:.0f}ms, 백엔드={proc.backend.name})"
     )
+    tok = sum(r.usage.input_tokens + r.usage.output_tokens for r in results if r.usage)
+    cost = sum(
+        r.usage.estimated_cost_usd
+        for r in results
+        if r.usage and r.usage.estimated_cost_usd
+    )
+    if tok:
+        print(f"토큰 합계 {tok:,} / 예상 비용 ${cost:.4f}")
     print(f"[saved] {out}")
     return 0
 
@@ -71,6 +81,55 @@ def cmd_query(args) -> int:
 def cmd_vqa(args) -> int:
     proc = _make_processor(args)
     print(proc.vqa(args.image, args.question))
+    return 0
+
+
+def cmd_doctor(args) -> int:
+    """환경 진단: 패키지·키·백엔드 확인. --ping 시 실제 API 호출로 키 검증."""
+    cfg = load_config(args.config)  # .env 로드 포함
+    if args.backend:
+        cfg["backend"] = args.backend
+    if args.model:
+        cfg["model"] = args.model
+
+    print("== 패키지 ==")
+    for mod, label in [
+        ("pydantic", "core"),
+        ("PIL", "core"),
+        ("yaml", "core"),
+        ("dotenv", "optional"),
+        ("google.genai", "gemini 백엔드"),
+        ("anthropic", "anthropic 백엔드"),
+        ("openai", "openai 백엔드"),
+        ("torch", "qwen 백엔드"),
+        ("transformers", "qwen 백엔드"),
+    ]:
+        try:
+            importlib.import_module(mod)
+            print(f"  [OK]  {mod:<13} ({label})")
+        except Exception:
+            print(f"  [--]  {mod:<13} ({label}) 미설치")
+
+    print("== 환경변수 키 ==")
+    for env in ["GEMINI_API_KEY", "GOOGLE_API_KEY", "ANTHROPIC_API_KEY", "OPENAI_API_KEY"]:
+        v = os.getenv(env)
+        print(f"  {env}: {'설정됨 (' + v[:7] + '...)' if v else '없음'}")
+
+    print(f"== 선택 백엔드: {cfg['backend']} (model={cfg.get('model') or '기본값'}) ==")
+    try:
+        backend = build_backend(cfg)
+    except Exception as e:
+        print(f"  [실패] 백엔드 초기화: {e}")
+        return 1
+    print(f"  [OK] 초기화: name={backend.name}, model={backend.model}")
+
+    if args.ping:
+        print("  핑(실제 API 호출) 중...")
+        try:
+            print("  " + backend.health_check())
+        except Exception as e:
+            print(f"  [실패] {e}")
+            return 1
     return 0
 
 
@@ -121,6 +180,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     i = sub.add_parser("info", help="현재 설정/백엔드 확인")
     i.set_defaults(func=cmd_info)
+
+    d = sub.add_parser("doctor", help="환경 진단(패키지/키/백엔드). --ping 으로 키 검증")
+    d.add_argument("--ping", action="store_true", help="실제 API를 호출해 키/연결 검증")
+    d.set_defaults(func=cmd_doctor)
 
     return p
 

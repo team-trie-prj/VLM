@@ -74,6 +74,16 @@ class ConceptPrompt(BaseModel):
     normalized: str = Field(default="", description="정규화/번역된 질의(선택)")
 
 
+class Usage(BaseModel):
+    """API 호출 토큰 사용량 + 예상 비용 (제안서 비용/효율 지표 근거)."""
+
+    input_tokens: int = 0
+    output_tokens: int = 0
+    cache_read_input_tokens: int = 0
+    cache_creation_input_tokens: int = 0
+    estimated_cost_usd: Optional[float] = None
+
+
 class VLMResult(BaseModel):
     """이미지 1장에 대해 저장하는 최종 레코드."""
 
@@ -85,6 +95,7 @@ class VLMResult(BaseModel):
     backend: str
     model: str
     latency_ms: Optional[float] = None
+    usage: Optional[Usage] = None
     created_at: str
     query: Optional[ConceptPrompt] = None
 
@@ -118,3 +129,5 @@ class PromptLog(BaseModel):
     query: Optional[str] = None
     response_summary: Optional[str] = None
     latency_ms: Optional[float] = None
+    input_tokens: Optional[int] = None
+    output_tokens: Optional[int] = None

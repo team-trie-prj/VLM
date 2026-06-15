@@ -5,7 +5,8 @@ pyyaml>=6.0
 python-dotenv>=1.0
 
 # --- API 백엔드 (키가 생기면 주석 해제하여 설치) ---------------------------
-# anthropic   # Claude 비전 (messages.parse 구조화 출력). 최신 버전 권장
-# openai      # GPT-4o 비전
+# google-genai  # Gemini 비전 (무료 티어). https://aistudio.google.com 무료 키
+# anthropic     # Claude 비전 (messages.parse 구조화 출력). 최신 버전 권장
+# openai        # GPT-4o 비전
 
 # --- 로컬 Qwen2.5-VL 백엔드는 requirements-local.txt 참고 ----------------

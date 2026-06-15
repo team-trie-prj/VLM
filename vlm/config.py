@@ -79,11 +79,17 @@ def build_backend(config: Optional[Dict[str, Any]] = None) -> VLMBackend:
 
         return OpenAIVLM(model=model or DEFAULT_MODEL, max_tokens=max_tokens)
 
+    if backend == "gemini":
+        from .backends.gemini_backend import DEFAULT_MODEL, GeminiVLM
+
+        return GeminiVLM(model=model or DEFAULT_MODEL, max_tokens=max_tokens)
+
     if backend == "qwen":
         from .backends.qwen_backend import DEFAULT_MODEL, QwenVLM
 
         return QwenVLM(model=model or DEFAULT_MODEL)
 
     raise ValueError(
-        f"알 수 없는 backend: {backend!r} (사용 가능: mock, anthropic, openai, qwen)"
+        f"알 수 없는 backend: {backend!r} "
+        "(사용 가능: mock, anthropic, openai, gemini, qwen)"
     )
