@@ -37,6 +37,8 @@ class VLMProcessor:
         t0 = time.perf_counter()
         analysis = self.backend.analyze_image(image_path)
         latency_ms = (time.perf_counter() - t0) * 1000.0
+        # parse_query 가 last_usage 를 덮어쓰기 전에 analyze 사용량을 캡처
+        usage = getattr(self.backend, "last_usage", None)
 
         concept: Optional[ConceptPrompt] = None
         if query:
@@ -51,6 +53,7 @@ class VLMProcessor:
             backend=self.backend.name,
             model=self.backend.model,
             latency_ms=round(latency_ms, 1),
+            usage=usage,
             created_at=_now_iso(),
             query=concept,
         )
@@ -64,6 +67,8 @@ class VLMProcessor:
                 query=query,
                 response_summary=analysis.caption[:120],
                 latency_ms=result.latency_ms,
+                input_tokens=usage.input_tokens if usage else None,
+                output_tokens=usage.output_tokens if usage else None,
             )
         )
         return result
@@ -122,11 +127,19 @@ class VLMProcessor:
     def save_dataset(self, results: List[VLMResult], name: str = "dataset") -> Path:
         """전체 결과를 하나의 데이터셋 JSON으로 저장 (images/metadata 형태)."""
         out = self.output_dir / f"{name}.json"
+        tin = sum(r.usage.input_tokens for r in results if r.usage)
+        tout = sum(r.usage.output_tokens for r in results if r.usage)
+        costs = [r.usage.estimated_cost_usd for r in results if r.usage and r.usage.estimated_cost_usd]
         payload = {
             "created_at": _now_iso(),
             "backend": self.backend.name,
             "model": self.backend.model,
             "count": len(results),
+            "totals": {
+                "input_tokens": tin,
+                "output_tokens": tout,
+                "estimated_cost_usd": round(sum(costs), 6) if costs else None,
+            },
             "images": [r.model_dump() for r in results],
             "metadata": [r.to_metadata() for r in results],
         }

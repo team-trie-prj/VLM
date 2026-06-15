@@ -12,6 +12,7 @@ from .schemas import (
     DamageInstance,
     ImageAnalysis,
     PromptLog,
+    Usage,
     VLMResult,
 )
 
@@ -20,6 +21,7 @@ __all__ = [
     "DamageInstance",
     "ImageAnalysis",
     "PromptLog",
+    "Usage",
     "VLMResult",
 ]
 

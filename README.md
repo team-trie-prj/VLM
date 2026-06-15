@@ -45,13 +45,26 @@ python -m vlm info
 
 ## API 키가 생기면 (실제 추론으로 전환)
 
+키 발급: https://console.anthropic.com → Billing 크레딧 충전 → API Keys → Create Key.
+
 ```powershell
 pip install anthropic
 copy .env.example .env          # .env 에 ANTHROPIC_API_KEY 입력
+
+# 1) 환경 진단 + 키 검증 (실제 1회 호출)
+python -m vlm --backend anthropic doctor --ping
+
+# 2) 실제 추론
 python -m vlm --backend anthropic analyze data/images/road_pothole_01.png
+python -m vlm --backend anthropic batch data/images   # 토큰·예상 비용 합계 출력
 ```
 
 또는 `config/default.yaml` 의 `backend: anthropic` 으로 영구 전환.
+
+- **비용 추적**: 각 결과 JSON에 `usage`(토큰)와 `estimated_cost_usd`가 기록되고,
+  배치는 합계를 출력한다 (제안서의 비용/효율 지표 근거). 단가표는 `vlm/pricing.py`.
+- **`doctor`**: 패키지/키/백엔드 진단. `--ping` 없이는 호출 없이 점검만, `--ping`은 실제 키 검증.
+- **비용 절감**: 대량 라벨링은 `--model claude-haiku-4-5` 또는 `claude-sonnet-4-6` 권장.
 
 ## 출력 예시 (메타데이터 JSON)
 

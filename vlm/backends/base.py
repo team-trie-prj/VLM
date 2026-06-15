@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Optional, Tuple
 
-from ..schemas import ConceptPrompt, ImageAnalysis
+from ..schemas import ConceptPrompt, ImageAnalysis, Usage
 
 _MEDIA_TYPES = {
     ".jpg": "image/jpeg",
@@ -55,6 +55,8 @@ class VLMBackend(ABC):
     name: str = "base"
     #: 사용 모델 식별자
     model: str = "unknown"
+    #: 직전 호출의 토큰 사용량(있으면). 파이프라인이 analyze 직후 읽어 기록한다.
+    last_usage: Optional[Usage] = None
 
     @abstractmethod
     def analyze_image(
@@ -69,3 +71,10 @@ class VLMBackend(ABC):
     @abstractmethod
     def parse_query(self, query: str) -> ConceptPrompt:
         """자연어 질의 → 탐지/분할용 개념 프롬프트."""
+
+    def health_check(self) -> str:
+        """백엔드 준비 상태 점검. API 백엔드는 최소 호출로 키/연결을 확인한다.
+
+        기본 구현은 라이브 호출 없이 'import OK'만 보고한다.
+        """
+        return f"{self.name}: 준비됨 (라이브 호출 없음)"
