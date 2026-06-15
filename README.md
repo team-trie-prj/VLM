@@ -13,12 +13,14 @@
 | backend | 설명 | 필요 조건 |
 |---|---|---|
 | `mock` | 키/GPU 없이 동작하는 결정론적 더미 (**기본값**) | 없음 |
-| `anthropic` | Claude 비전 API, 구조화 출력 (1순위 실행) | `ANTHROPIC_API_KEY` + `pip install anthropic` |
-| `openai` | GPT-4o 비전 API | `OPENAI_API_KEY` + `pip install openai` |
+| `gemini` | Google Gemini 비전 API, 구조화 출력 (**무료 티어**) | `GEMINI_API_KEY`(무료) + `pip install google-genai` |
+| `anthropic` | Claude 비전 API, 구조화 출력 (유료, 고품질) | `ANTHROPIC_API_KEY`(유료) + `pip install anthropic` |
+| `openai` | GPT-4o 비전 API (유료) | `OPENAI_API_KEY` + `pip install openai` |
 | `qwen` | 로컬 Qwen2.5-VL (**GPU 확보 시 활성화**) | `requirements-local.txt`, NVIDIA GPU 권장 |
 
 현재 이 PC에는 NVIDIA GPU가 없어 로컬 Qwen은 느립니다. **`mock`으로 구조를
-검증**하고, API 키가 생기면 `anthropic` 으로 전환하는 것을 권장합니다. Qwen 코드는
+검증**하고, 실제 추론은 **무료 티어인 `gemini`** 로 전환하는 것을 권장합니다.
+(`anthropic`/`openai`는 유료. Claude 구독과 API 과금은 별개입니다.) Qwen 코드는
 이미 들어 있으므로 GPU 서버에서 `backend: qwen` 한 줄로 켤 수 있습니다.
 
 ## 빠른 시작 (키 없이 지금 바로)
@@ -43,23 +45,34 @@ python -m vlm query "도로 균열이랑 패임 표시해줘"
 python -m vlm info
 ```
 
-## API 키가 생기면 (실제 추론으로 전환)
+## 실제 추론으로 전환
 
-키 발급: https://console.anthropic.com → Billing 크레딧 충전 → API Keys → Create Key.
+### 권장: Gemini (무료 티어)
+
+키 발급(결제수단 불필요): https://aistudio.google.com → "Get API key".
+
+```powershell
+pip install google-genai
+copy .env.example .env          # .env 에 GEMINI_API_KEY 입력
+
+python -m vlm --backend gemini doctor --ping                 # 키/연결 검증
+python -m vlm --backend gemini analyze data/images/road_pothole_01.png
+python -m vlm --backend gemini batch data/images             # 토큰 합계 출력(무료=비용 0)
+```
+
+또는 `config/default.yaml` 의 `backend: gemini` 로 영구 전환.
+
+### 유료 고품질: Anthropic Claude
+
+> Claude **구독**(Pro/Max)과 Anthropic **API**는 과금이 별개입니다. 구독이 있어도
+> API는 무료가 아니며, https://console.anthropic.com 에서 선불 크레딧 충전이 필요합니다.
 
 ```powershell
 pip install anthropic
-copy .env.example .env          # .env 에 ANTHROPIC_API_KEY 입력
-
-# 1) 환경 진단 + 키 검증 (실제 1회 호출)
+# .env 에 ANTHROPIC_API_KEY 입력
 python -m vlm --backend anthropic doctor --ping
-
-# 2) 실제 추론
-python -m vlm --backend anthropic analyze data/images/road_pothole_01.png
-python -m vlm --backend anthropic batch data/images   # 토큰·예상 비용 합계 출력
+python -m vlm --backend anthropic batch data/images          # 토큰·예상 비용 합계 출력
 ```
-
-또는 `config/default.yaml` 의 `backend: anthropic` 으로 영구 전환.
 
 - **비용 추적**: 각 결과 JSON에 `usage`(토큰)와 `estimated_cost_usd`가 기록되고,
   배치는 합계를 출력한다 (제안서의 비용/효율 지표 근거). 단가표는 `vlm/pricing.py`.

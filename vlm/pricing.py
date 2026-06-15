@@ -25,7 +25,13 @@ OPENAI_PRICING = {
     "gpt-4o-mini": (0.15, 0.6),
 }
 
-_TABLE = {**ANTHROPIC_PRICING, **OPENAI_PRICING}
+# Gemini — 무료 티어 한도 내 사용 기준 0. (유료 전환 시 공식 단가 참조)
+GEMINI_PRICING = {
+    "gemini-2.5-flash": (0.0, 0.0),
+    "gemini-2.0-flash": (0.0, 0.0),
+}
+
+_TABLE = {**ANTHROPIC_PRICING, **OPENAI_PRICING, **GEMINI_PRICING}
 
 
 def estimate_cost_usd(

@@ -98,6 +98,7 @@ def cmd_doctor(args) -> int:
         ("PIL", "core"),
         ("yaml", "core"),
         ("dotenv", "optional"),
+        ("google.genai", "gemini 백엔드"),
         ("anthropic", "anthropic 백엔드"),
         ("openai", "openai 백엔드"),
         ("torch", "qwen 백엔드"),
@@ -110,7 +111,7 @@ def cmd_doctor(args) -> int:
             print(f"  [--]  {mod:<13} ({label}) 미설치")
 
     print("== 환경변수 키 ==")
-    for env in ["ANTHROPIC_API_KEY", "OPENAI_API_KEY"]:
+    for env in ["GEMINI_API_KEY", "GOOGLE_API_KEY", "ANTHROPIC_API_KEY", "OPENAI_API_KEY"]:
         v = os.getenv(env)
         print(f"  {env}: {'설정됨 (' + v[:7] + '...)' if v else '없음'}")
 

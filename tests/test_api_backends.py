@@ -28,7 +28,10 @@ class SkipTest(Exception):
 
 
 def _have(pkg: str) -> bool:
-    return importlib.util.find_spec(pkg) is not None
+    try:
+        return importlib.util.find_spec(pkg) is not None
+    except (ImportError, ModuleNotFoundError, ValueError):
+        return False
 
 
 def _tmp_image() -> str:
@@ -79,6 +82,20 @@ def test_openai_live_analyze():
     backend = OpenAIVLM()
     analysis = backend.analyze_image(_tmp_image())
     assert isinstance(analysis, ImageAnalysis)
+
+
+def test_gemini_live_analyze():
+    if not _have("google.genai"):
+        raise SkipTest("google-genai 미설치")
+    if not (os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")):
+        raise SkipTest("GEMINI_API_KEY 없음")
+
+    from vlm.backends.gemini_backend import GeminiVLM
+
+    backend = GeminiVLM()
+    analysis = backend.analyze_image(_tmp_image())
+    assert isinstance(analysis, ImageAnalysis)
+    assert backend.last_usage is not None
 
 
 # pytest 없이 직접 실행할 때의 러너
