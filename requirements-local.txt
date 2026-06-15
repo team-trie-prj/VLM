@@ -1,0 +1,10 @@
+# 로컬 Qwen2.5-VL 백엔드용 (NVIDIA GPU 서버 권장)
+#
+# CUDA 휠은 환경에 맞게 https://pytorch.org 에서 설치 명령을 확인하세요.
+# 예) pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124
+torch
+torchvision
+transformers>=4.49
+accelerate
+qwen-vl-utils
+pillow>=10.0

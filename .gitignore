@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# 환경/비밀
+.env
+
+# 데이터/산출물 (샘플 제외)
+data/images/*
+!data/images/.gitkeep
+data/outputs/*
+!data/outputs/.gitkeep
+
+# 모델 캐시
+*.pt
+*.safetensors
+.cache/
