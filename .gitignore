@@ -14,6 +14,7 @@ data/images/*
 !data/images/.gitkeep
 data/outputs/*
 !data/outputs/.gitkeep
+data/roboflow/
 
 # 모델 캐시
 *.pt
