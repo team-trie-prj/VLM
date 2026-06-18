@@ -9,4 +9,7 @@ python-dotenv>=1.0
 # anthropic     # Claude 비전 (messages.parse 구조화 출력). 최신 버전 권장
 # openai        # GPT-4o 비전
 
+# --- 실제 데이터 확보 (선택) ----------------------------------------------
+# roboflow    # Roboflow Universe 도로손상 데이터셋 다운로드 (scripts/fetch_roboflow.py)
+
 # --- 로컬 Qwen2.5-VL 백엔드는 requirements-local.txt 참고 ----------------
