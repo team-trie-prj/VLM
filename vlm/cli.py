@@ -50,7 +50,7 @@ def cmd_batch(args) -> int:
     import time
 
     t0 = time.perf_counter()
-    results = proc.process_dir(args.image_dir, query=args.query)
+    results = proc.process_dir(args.image_dir, query=args.query, delay=args.delay)
     elapsed = time.perf_counter() - t0
 
     out = proc.save_dataset(results, name=args.name)
@@ -167,6 +167,8 @@ def build_parser() -> argparse.ArgumentParser:
     b.add_argument("image_dir", help="이미지 디렉터리")
     b.add_argument("--query", help="(선택) 공통 자연어 질의")
     b.add_argument("--name", default="dataset", help="출력 데이터셋 파일명")
+    b.add_argument("--delay", type=float, default=0.0,
+                   help="이미지 간 대기(초). Gemini 무료 티어(5 RPM)는 13 권장")
     b.set_defaults(func=cmd_batch)
 
     q = sub.add_parser("query", help="자연어 질의 -> 탐지 개념 프롬프트")

@@ -37,10 +37,17 @@ python scripts/fetch_roboflow.py --url https://universe.roboflow.com/X/Y/dataset
 ```
 → `data/roboflow/Y/` 에 원본, `data/images/real/` 에 샘플 N장이 복사됩니다.
 
+**이미 zip으로 받았다면** (Roboflow 사이트에서 직접 다운로드한 경우, 키 불필요):
+```powershell
+python scripts/fetch_roboflow.py --zip "C:\path\to\dataset.yolov8.zip" --sample 20
+```
+
 **4) VLM으로 검증**
 ```powershell
-python -m vlm --backend gemini batch data/images/real
+python -m vlm --backend gemini batch data/images/real --delay 13
 ```
+> Gemini 무료 티어는 **분당 5회(5 RPM)** 제한이라, 여러 장 배치 시 `--delay 13`(이미지 간 13초)을
+> 주면 한도를 넘지 않습니다. (백엔드에도 429 자동 재시도가 있어 일부는 그냥 기다렸다 처리됩니다.)
 
 `.env` 에 `ROBOFLOW_WORKSPACE/PROJECT/VERSION` 을 넣어두면 인자 없이 실행할 수 있습니다.
 

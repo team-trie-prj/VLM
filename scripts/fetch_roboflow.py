@@ -59,11 +59,27 @@ def parse_url(url: str):
     return m.group(1), m.group(2), ver
 
 
+def _populate(src: Path, name: str, sample: int) -> int:
+    """src(추출/다운로드 폴더)에서 이미지를 모아 data/images/real/ 로 복사."""
+    imgs = sorted(p for p in src.rglob("*") if p.suffix.lower() in IMG_EXT)
+    if not imgs:
+        print("[경고] 폴더에서 이미지를 찾지 못했습니다.")
+        return 1
+    REAL_DIR.mkdir(parents=True, exist_ok=True)
+    pick = imgs if sample <= 0 else imgs[:sample]
+    for i, p in enumerate(pick):
+        shutil.copy2(p, REAL_DIR / f"{name}_{i:03d}{p.suffix.lower()}")
+    print(f"real/ 에 {len(pick)}장 복사 (전체 {len(imgs)}장): {REAL_DIR}")
+    print("다음: python -m vlm --backend gemini batch data/images/real")
+    return 0
+
+
 def main() -> int:
     _safe_stdout()
     _load_env()
 
     ap = argparse.ArgumentParser(description="Roboflow 공개 데이터셋 다운로드")
+    ap.add_argument("--zip", help="로컬 Roboflow zip 경로 (SDK 대신 직접 받은 zip 사용)")
     ap.add_argument("--url", help="Roboflow Universe 데이터셋 URL (workspace/project 파싱)")
     ap.add_argument("--workspace", default=os.getenv("ROBOFLOW_WORKSPACE"))
     ap.add_argument("--project", default=os.getenv("ROBOFLOW_PROJECT"))
@@ -73,6 +89,21 @@ def main() -> int:
     ap.add_argument("--sample", type=int, default=20,
                     help="real/ 로 복사할 이미지 수 (0=전체)")
     args = ap.parse_args()
+
+    # 로컬 zip 경로: SDK/키 없이 바로 처리
+    if args.zip:
+        import zipfile
+
+        zp = Path(args.zip)
+        if not zp.exists():
+            print(f"[실패] zip 파일이 없습니다: {zp}")
+            return 1
+        dest = RAW_DIR / zp.stem
+        dest.mkdir(parents=True, exist_ok=True)
+        print(f"압축 해제: {zp.name} -> {dest}")
+        with zipfile.ZipFile(zp) as z:
+            z.extractall(dest)
+        return _populate(dest, zp.stem.split(".")[0], args.sample)
 
     # URL이 주면 명시 인자보다 우선순위 낮게 보충
     u_ws, u_proj, u_ver = parse_url(args.url or "")
@@ -110,17 +141,7 @@ def main() -> int:
     )
     print(f"원본 데이터셋 저장: {loc}")
 
-    imgs = sorted(p for p in loc.rglob("*") if p.suffix.lower() in IMG_EXT)
-    if not imgs:
-        print("[경고] 다운로드 폴더에서 이미지를 찾지 못했습니다.")
-        return 1
-
-    pick = imgs if args.sample <= 0 else imgs[: args.sample]
-    for i, p in enumerate(pick):
-        shutil.copy2(p, REAL_DIR / f"rf_{project}_{i:03d}{p.suffix.lower()}")
-    print(f"real/ 에 {len(pick)}장 복사 (전체 {len(imgs)}장): {REAL_DIR}")
-    print("다음: python -m vlm --backend gemini batch data/images/real")
-    return 0
+    return _populate(loc, f"rf_{project}", args.sample)
 
 
 if __name__ == "__main__":

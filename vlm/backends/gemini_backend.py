@@ -8,6 +8,8 @@ google-genai SDK 사용. GEMINI_API_KEY(또는 GOOGLE_API_KEY) 환경변수 필�
 from __future__ import annotations
 
 import os
+import re
+import time
 from pathlib import Path
 from typing import Optional
 
@@ -57,6 +59,24 @@ class GeminiVLM(VLMBackend):
             mime_type=image_media_type(image_path),
         )
 
+    def _gen(self, contents, config):
+        """generate_content + 무료 티어 429(분당 한도 초과) 재시도(backoff)."""
+        delay = 5.0
+        for attempt in range(5):
+            try:
+                return self._client.models.generate_content(
+                    model=self.model, contents=contents, config=config
+                )
+            except Exception as e:
+                msg = str(e)
+                if attempt < 4 and ("429" in msg or "RESOURCE_EXHAUSTED" in msg):
+                    m = re.search(r"retry in (\d+(?:\.\d+)?)", msg)
+                    wait = (float(m.group(1)) + 1.0) if m else delay
+                    time.sleep(min(wait, 60.0))
+                    delay = min(delay * 2, 60.0)
+                    continue
+                raise
+
     def _record_usage(self, resp) -> None:
         u = getattr(resp, "usage_metadata", None)
         if u is None:
@@ -80,10 +100,8 @@ class GeminiVLM(VLMBackend):
             response_schema=ImageAnalysis,
             max_output_tokens=self.max_tokens,
         )
-        resp = self._client.models.generate_content(
-            model=self.model,
-            contents=[self._image_part(image_path), instruction or ANALYZE_INSTRUCTION],
-            config=cfg,
+        resp = self._gen(
+            [self._image_part(image_path), instruction or ANALYZE_INSTRUCTION], cfg
         )
         self._record_usage(resp)
         parsed = getattr(resp, "parsed", None)
@@ -95,11 +113,7 @@ class GeminiVLM(VLMBackend):
         cfg = self._types.GenerateContentConfig(
             system_instruction=VQA_SYSTEM, max_output_tokens=1024
         )
-        resp = self._client.models.generate_content(
-            model=self.model,
-            contents=[self._image_part(image_path), question],
-            config=cfg,
-        )
+        resp = self._gen([self._image_part(image_path), question], cfg)
         self._record_usage(resp)
         return (resp.text or "").strip()
 
@@ -111,11 +125,7 @@ class GeminiVLM(VLMBackend):
                 response_schema=ConceptPrompt,
                 max_output_tokens=512,
             )
-            resp = self._client.models.generate_content(
-                model=self.model,
-                contents=[PARSE_QUERY_INSTRUCTION.format(query=query)],
-                config=cfg,
-            )
+            resp = self._gen([PARSE_QUERY_INSTRUCTION.format(query=query)], cfg)
             self._record_usage(resp)
             parsed = getattr(resp, "parsed", None)
             if not isinstance(parsed, ConceptPrompt):
@@ -126,9 +136,5 @@ class GeminiVLM(VLMBackend):
             return keyword_parse_query(query)
 
     def health_check(self) -> str:
-        self._client.models.generate_content(
-            model=self.model,
-            contents=["ping"],
-            config=self._types.GenerateContentConfig(max_output_tokens=8),
-        )
+        self._gen(["ping"], self._types.GenerateContentConfig(max_output_tokens=8))
         return f"gemini OK - model={self.model}, 키 인증/연결 정상 (무료 티어)"

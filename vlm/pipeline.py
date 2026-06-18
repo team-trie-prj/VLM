@@ -104,11 +104,13 @@ class VLMProcessor:
 
     # --- 배치 처리 -----------------------------------------------------------
     def process_dir(
-        self, image_dir: str | Path, query: Optional[str] = None
+        self, image_dir: str | Path, query: Optional[str] = None, delay: float = 0.0
     ) -> List[VLMResult]:
         paths = sorted(p for p in Path(image_dir).iterdir() if is_image_file(p))
         results: List[VLMResult] = []
-        for p in paths:
+        for i, p in enumerate(paths):
+            if delay and i:  # API 분당 한도(예: Gemini 무료 5 RPM) 대비 페이싱
+                time.sleep(delay)
             try:
                 results.append(self.process(p, query=query))
             except Exception as e:  # 한 장 실패가 배치 전체를 막지 않도록
