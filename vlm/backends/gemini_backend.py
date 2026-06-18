@@ -131,4 +131,4 @@ class GeminiVLM(VLMBackend):
             contents=["ping"],
             config=self._types.GenerateContentConfig(max_output_tokens=8),
         )
-        return f"gemini OK — model={self.model}, 키 인증/연결 정상 (무료 티어)"
+        return f"gemini OK - model={self.model}, 키 인증/연결 정상 (무료 티어)"
