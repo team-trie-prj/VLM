@@ -123,6 +123,23 @@ python -m vlm label data/images/real "포트홀 찾아줘" --detector gemini --m
 ```
 → `data/outputs/labels_export/` 에 `annotations_coco.json` + `labels/*.txt` + `classes.txt`.
 
+## 검수 (review, ⑤)
+
+자동 라벨을 사람이 검수하는 루프. 외부 도구(CVAT/Label Studio)는 **COCO 라운드트립**으로 연결합니다.
+
+```powershell
+# 1) 트리아지: confidence로 자동확정/검수대상 분리 → 자동확정률
+python -m vlm review prep --coco data/outputs/labels_export/annotations_coco.json --confirm-thr 0.5
+
+# 2) CVAT(Docker) 또는 Label Studio(pip install label-studio)에 위 COCO를 import
+#    → 사람이 수정/확정 → 다시 COCO로 export
+
+# 3) 수정 전/후 비교 → 수정 비율·precision·recall (제안서 평가지표)
+python -m vlm review report --auto <auto_coco.json> --reviewed <corrected_coco.json>
+```
+→ `review_manifest.json`(검수 상태/검수자/시각) + `review_report.json`(자동확정률·수정 비율).
+확정 라벨은 ⑥ 파인튜닝 데이터로 환류됩니다.
+
 ## 모델 비교 (compare)
 
 같은 이미지를 여러 백엔드로 돌려 **정량 비교표**(일치율·속도·비용·탐지율)를 만듭니다.
@@ -148,8 +165,9 @@ vlm/
   pipeline.py    # 오케스트레이터 (단건/배치, 시간측정, prompt_log)
   compare.py     # 백엔드 비교·검증 (정량 비교표)
   labels.py      # 탐지 → COCO/YOLO 라벨 변환 (④)
+  review.py      # 검수 트리아지/수정 비교 (⑤, 자동확정률·수정 비율)
   overlay.py     # 탐지 결과 이미지 오버레이 (박스 + 분할 mask)
-  cli.py         # CLI (analyze/batch/query/vqa/detect/label/compare/doctor/info)
+  cli.py         # CLI (analyze/batch/query/vqa/detect/label/review/compare/doctor/info)
   backends/      # VLM: mock / gemini / anthropic / openai / qwen
   detectors/     # 탐지(③): mock / gemini
 config/default.yaml

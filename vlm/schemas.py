@@ -143,6 +143,49 @@ class DetectionResult(BaseModel):
     overlay_path: Optional[str] = None
 
 
+# --- 검수(human-in-the-loop, 파이프라인 ⑤) ---------------------------------
+ReviewStatus = Literal["confirmed", "pending", "rejected", "edited"]  # 확정/미검수/반려/수정
+
+
+class ReviewItem(BaseModel):
+    """검수 단위(어노테이션 1건의 검수 상태). 제안서 review 데이터 구조."""
+
+    ann_id: int
+    image_id: int
+    category_id: int
+    bbox: List[int] = Field(description="[x, y, w, h] (COCO)")
+    score: float
+    status: ReviewStatus = "pending"
+    reviewer: Optional[str] = None
+    reviewed_at: Optional[str] = None
+    note: str = ""
+
+
+class ReviewManifest(BaseModel):
+    """confidence 트리아지 결과 + 자동확정률."""
+
+    confirm_threshold: float
+    total: int
+    auto_confirmed: int
+    needs_review: int
+    auto_confirm_rate: float
+    items: List[ReviewItem] = Field(default_factory=list)
+
+
+class ReviewReport(BaseModel):
+    """auto vs 사람-수정 COCO 비교 지표 (수정 비율 등)."""
+
+    iou_threshold: float
+    auto_count: int
+    reviewed_count: int
+    matched: int
+    removed_by_reviewer: int
+    added_by_reviewer: int
+    correction_rate: float
+    precision_vs_human: float
+    recall_vs_human: float
+
+
 class PromptLog(BaseModel):
     """재현성·평가용 프롬프트 로그 (제안서 prompt_log)."""
 

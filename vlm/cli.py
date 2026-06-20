@@ -225,6 +225,47 @@ def cmd_compare(args) -> int:
     return 0
 
 
+def cmd_review(args) -> int:
+    from .review import compare_coco, triage
+
+    cfg = load_config(args.config)
+    out_dir = Path(cfg.get("output_dir", "data/outputs"))
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    if args.mode == "prep":
+        if not args.coco:
+            print("[실패] --coco <auto COCO 경로> 가 필요합니다.")
+            return 1
+        coco = json.loads(Path(args.coco).read_text(encoding="utf-8"))
+        man = triage(coco, args.confirm_thr)
+        p = out_dir / "review_manifest.json"
+        p.write_text(json.dumps(man.model_dump(), ensure_ascii=False, indent=2),
+                     encoding="utf-8")
+        print(f"트리아지: 총 {man.total} / 자동확정 {man.auto_confirmed} / "
+              f"검수대상 {man.needs_review}")
+        print(f"자동확정률 {man.auto_confirm_rate * 100:.1f}% (임계값 {args.confirm_thr})")
+        print(f"[saved] {p}")
+        return 0
+
+    # report
+    if not (args.auto and args.reviewed):
+        print("[실패] --auto 와 --reviewed COCO 경로가 필요합니다.")
+        return 1
+    auto = json.loads(Path(args.auto).read_text(encoding="utf-8"))
+    rev = json.loads(Path(args.reviewed).read_text(encoding="utf-8"))
+    rep = compare_coco(auto, rev, args.iou)
+    p = out_dir / "review_report.json"
+    p.write_text(json.dumps(rep.model_dump(), ensure_ascii=False, indent=2),
+                 encoding="utf-8")
+    print(f"auto {rep.auto_count} / reviewed {rep.reviewed_count} / 매칭 {rep.matched}")
+    print(f"검수자 삭제(오탐) {rep.removed_by_reviewer} / 추가(미탐) {rep.added_by_reviewer}")
+    print(f"수정 비율 {rep.correction_rate * 100:.1f}% "
+          f"(precision {rep.precision_vs_human * 100:.0f}% / "
+          f"recall {rep.recall_vs_human * 100:.0f}%)")
+    print(f"[saved] {p}")
+    return 0
+
+
 def cmd_doctor(args) -> int:
     """환경 진단: 패키지·키·백엔드 확인. --ping 시 실제 API 호출로 키 검증."""
     cfg = load_config(args.config)  # .env 로드 포함
@@ -336,6 +377,15 @@ def build_parser() -> argparse.ArgumentParser:
     lb.add_argument("--delay", type=float, default=0.0,
                     help="이미지 간 대기(초). 무료 Gemini는 13 권장")
     lb.set_defaults(func=cmd_label)
+
+    rv = sub.add_parser("review", help="⑤ 검수: prep(자동확정률) / report(수정 비율)")
+    rv.add_argument("mode", choices=["prep", "report"])
+    rv.add_argument("--coco", help="prep: auto COCO 경로")
+    rv.add_argument("--confirm-thr", type=float, default=0.5, help="prep: 자동확정 임계값")
+    rv.add_argument("--auto", help="report: auto COCO 경로")
+    rv.add_argument("--reviewed", help="report: 사람-수정 COCO 경로")
+    rv.add_argument("--iou", type=float, default=0.5, help="report: 매칭 IoU 임계값")
+    rv.set_defaults(func=cmd_review)
 
     cp = sub.add_parser("compare", help="여러 백엔드 비교 (정량 비교표 + JSON)")
     cp.add_argument("image_dir", help="이미지 디렉터리")
