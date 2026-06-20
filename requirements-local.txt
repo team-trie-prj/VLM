@@ -8,3 +8,6 @@ transformers>=4.49
 accelerate
 qwen-vl-utils
 pillow>=10.0
+
+# YOLO 파인튜닝/추론 (⑥). Colab에서 학습한 best.pt 를 로컬 CPU 추론에도 사용.
+ultralytics>=8.3

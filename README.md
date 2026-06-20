@@ -140,6 +140,21 @@ python -m vlm review report --auto <auto_coco.json> --reviewed <corrected_coco.j
 → `review_manifest.json`(검수 상태/검수자/시각) + `review_report.json`(자동확정률·수정 비율).
 확정 라벨은 ⑥ 파인튜닝 데이터로 환류됩니다.
 
+## 파인튜닝 (⑥, Colab 무료 GPU)
+
+Gemini는 닫힌 API라 학습 불가 → 오픈 모델(YOLO)을 **무료 Colab GPU**에서 파인튜닝하고
+전/후 mAP를 비교합니다. 학습 데이터는 Roboflow 라벨 / 우리가 ④에서 만든 라벨.
+
+1. [`notebooks/finetune_yolo_colab.ipynb`](notebooks/finetune_yolo_colab.ipynb) 를 Colab에 업로드 (런타임 = GPU)
+2. Pothole zip 업로드 → 학습 → `mAP@0.5` → `best.pt` 다운로드
+3. `models/pothole_yolo.pt` 로 저장 → 우리 파이프라인에 끼움:
+```powershell
+pip install ultralytics
+python -m vlm detect <img> --detector yolo
+python -m vlm compare data/images/real --backends gemini,yolo   # 파인튜닝 YOLO vs Gemini
+```
+→ `compare`로 모델 간/파인튜닝 전후 성능을 정량 비교 (제안서 "파인튜닝 전후 성능표").
+
 ## 모델 비교 (compare)
 
 같은 이미지를 여러 백엔드로 돌려 **정량 비교표**(일치율·속도·비용·탐지율)를 만듭니다.
@@ -169,10 +184,12 @@ vlm/
   overlay.py     # 탐지 결과 이미지 오버레이 (박스 + 분할 mask)
   cli.py         # CLI (analyze/batch/query/vqa/detect/label/review/compare/doctor/info)
   backends/      # VLM: mock / gemini / anthropic / openai / qwen
-  detectors/     # 탐지(③): mock / gemini
+  detectors/     # 탐지: mock / gemini / yolo(파인튜닝 ⑥)
 config/default.yaml
+notebooks/finetune_yolo_colab.ipynb   # ⑥ Colab 파인튜닝
+models/   # 파인튜닝 가중치(.pt, git 미추적)
 scripts/  make_sample_images.py · fetch_roboflow.py
-tests/  test_mock.py · test_compare.py · test_detect.py · test_labels.py · test_api_backends.py
+tests/  test_mock · test_compare · test_detect · test_labels · test_review · test_api_backends
 ```
 
 ## 테스트

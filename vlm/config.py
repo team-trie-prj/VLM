@@ -110,4 +110,9 @@ def build_detector(config: Optional[Dict[str, Any]] = None):
 
         return GeminiDetector(model=cfg.get("detector_model") or DEFAULT_MODEL)
 
-    raise ValueError(f"알 수 없는 detector: {detector!r} (사용 가능: mock, gemini)")
+    if detector == "yolo":
+        from .detectors.yolo import DEFAULT_WEIGHTS, YoloDetector
+
+        return YoloDetector(weights=cfg.get("yolo_weights") or DEFAULT_WEIGHTS)
+
+    raise ValueError(f"알 수 없는 detector: {detector!r} (사용 가능: mock, gemini, yolo)")

@@ -40,6 +40,15 @@ def test_build_detector_mock():
     assert det.name == "mock"
 
 
+def test_yolo_detector_missing_weights():
+    # 가중치 없으면 친절한 FileNotFoundError (Colab에서 받아오라는 안내)
+    try:
+        build_detector({"detector": "yolo", "yolo_weights": "models/__none__.pt"})
+        assert False, "should raise"
+    except FileNotFoundError as e:
+        assert "models/__none__.pt" in str(e)
+
+
 def test_overlay_creates_file():
     img = _tmp_image()
     dets = MockDetector().detect(img, ["crack"])
