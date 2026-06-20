@@ -109,7 +109,19 @@ python -m vlm detect data/images/real/Pothole_000.jpg "포트홀 찾아줘" --de
 #   --concepts pothole,crack  (개념 직접 지정), --detector mock (키 없이 테스트)
 ```
 → `data/outputs/<id>_detect.json`(박스·라벨·신뢰도) + `<id>_detected.png`(오버레이).
-탐지 백엔드는 `DetectorBackend` 추상화라 추후 Roboflow/YOLOE/SAM으로 교체 가능. 분할 mask는 후속 증분.
+`--masks` 로 분할 mask도 시도(채색 오버레이). 단 **무료 gemini-2.5-flash는 mask 반환이 불안정**해
+실패 시 박스로 폴백합니다 — 정밀 mask는 gemini-2.5-pro(유료)나 SAM 계열(후속 DetectorBackend) 권장.
+탐지 백엔드는 `DetectorBackend` 추상화라 Roboflow/YOLOE/SAM으로 교체 가능.
+
+## 자동 라벨 생성 (label, ④)
+
+탐지 결과를 **COCO/YOLO** 포맷으로 변환 (confidence 필터 포함). 검수 도구(CVAT/Label Studio, ⑤)로 import.
+
+```powershell
+python -m vlm label data/images/real "포트홀 찾아줘" --detector gemini --min-conf 0.3 --delay 13
+#   --format coco|yolo|both, --limit N
+```
+→ `data/outputs/labels_export/` 에 `annotations_coco.json` + `labels/*.txt` + `classes.txt`.
 
 ## 모델 비교 (compare)
 
@@ -135,13 +147,14 @@ vlm/
   config.py      # 설정 로딩 + 백엔드 팩토리
   pipeline.py    # 오케스트레이터 (단건/배치, 시간측정, prompt_log)
   compare.py     # 백엔드 비교·검증 (정량 비교표)
-  overlay.py     # 탐지 결과 이미지 오버레이
-  cli.py         # CLI (analyze/batch/query/vqa/detect/compare/doctor/info)
+  labels.py      # 탐지 → COCO/YOLO 라벨 변환 (④)
+  overlay.py     # 탐지 결과 이미지 오버레이 (박스 + 분할 mask)
+  cli.py         # CLI (analyze/batch/query/vqa/detect/label/compare/doctor/info)
   backends/      # VLM: mock / gemini / anthropic / openai / qwen
   detectors/     # 탐지(③): mock / gemini
 config/default.yaml
 scripts/  make_sample_images.py · fetch_roboflow.py
-tests/  test_mock.py · test_compare.py · test_detect.py · test_api_backends.py
+tests/  test_mock.py · test_compare.py · test_detect.py · test_labels.py · test_api_backends.py
 ```
 
 ## 테스트
