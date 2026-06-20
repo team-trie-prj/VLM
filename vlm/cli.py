@@ -108,18 +108,20 @@ def cmd_detect(args) -> int:
         concepts = ["pothole", "crack"]
 
     det = build_detector(cfg)
-    w, h = image_size(args.image)
-    t0 = time.perf_counter()
-    detections = det.detect(args.image, concepts)
-    lat = (time.perf_counter() - t0) * 1000.0
-
     out_dir = Path(cfg.get("output_dir", "data/outputs"))
     out_dir.mkdir(parents=True, exist_ok=True)
+    mask_dir = str(out_dir / "masks") if args.masks else None
+
+    w, h = image_size(args.image)
+    t0 = time.perf_counter()
+    detections = det.detect(args.image, concepts, mask_dir=mask_dir)
+    lat = (time.perf_counter() - t0) * 1000.0
+
     image_id = Path(args.image).stem
     overlay_path = None
     if not args.no_overlay and detections:
         overlay_path = str(out_dir / f"{image_id}_detected.png")
-        draw_detections(args.image, detections, overlay_path)
+        draw_detections(args.image, detections, overlay_path, with_masks=args.masks)
 
     result = DetectionResult(
         image_id=image_id, image_path=args.image, width=w, height=h,
@@ -139,6 +141,69 @@ def cmd_detect(args) -> int:
     if overlay_path:
         print(f"[overlay] {overlay_path}")
     print(f"[saved] {out}")
+    return 0
+
+
+def cmd_label(args) -> int:
+    import time
+    from datetime import datetime, timezone
+
+    from .backends.base import image_size, is_image_file
+    from .keywords import keyword_parse_query
+    from .labels import to_yolo, write_coco
+    from .schemas import DetectionResult
+
+    cfg = load_config(args.config)
+    if args.detector:
+        cfg["detector"] = args.detector
+    if args.model:
+        cfg["detector_model"] = args.model
+
+    if args.concepts:
+        concepts = [c.strip() for c in args.concepts.split(",") if c.strip()]
+    elif args.query:
+        concepts = keyword_parse_query(args.query).concepts or [args.query]
+    else:
+        concepts = ["pothole", "crack"]
+
+    det = build_detector(cfg)
+    paths = sorted(p for p in Path(args.image_dir).iterdir() if is_image_file(p))
+    if args.limit > 0:
+        paths = paths[: args.limit]
+
+    results = []
+    for i, p in enumerate(paths):
+        if args.delay and i and det.name != "mock":
+            time.sleep(args.delay)
+        try:
+            w, h = image_size(p)
+            t0 = time.perf_counter()
+            dets = det.detect(str(p), concepts)
+            lat = (time.perf_counter() - t0) * 1000.0
+        except Exception as e:
+            print(f"[warn] {p.name} 탐지 실패: {e}")
+            continue
+        results.append(DetectionResult(
+            image_id=p.stem, image_path=str(p), width=w, height=h,
+            concepts=concepts, detections=dets, backend=det.name, model=det.model,
+            latency_ms=round(lat, 1),
+            created_at=datetime.now(timezone.utc).isoformat(),
+        ))
+
+    out_dir = Path(cfg.get("output_dir", "data/outputs")) / "labels_export"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    total = sum(
+        len([d for d in r.detections if d.confidence >= args.min_conf])
+        for r in results
+    )
+    if args.format in ("coco", "both"):
+        cp = write_coco(results, out_dir / "annotations_coco.json", min_conf=args.min_conf)
+        print(f"[COCO] {cp}")
+    if args.format in ("yolo", "both"):
+        ld, names = to_yolo(results, out_dir, min_conf=args.min_conf)
+        print(f"[YOLO] {ld} (classes={names})")
+    print(f"이미지 {len(results)}장 / 라벨 {total}건 "
+          f"(min_conf={args.min_conf}, backend={det.name})")
     return 0
 
 
@@ -256,8 +321,21 @@ def build_parser() -> argparse.ArgumentParser:
     dt.add_argument("query", nargs="?", help="자연어 질의 (예: '포트홀 찾아줘')")
     dt.add_argument("--concepts", help="개념 직접 지정 (쉼표구분, 질의보다 우선)")
     dt.add_argument("--detector", help="탐지 백엔드 (mock/gemini)")
+    dt.add_argument("--masks", action="store_true", help="분할 mask도 생성(gemini)")
     dt.add_argument("--no-overlay", action="store_true", help="오버레이 이미지 저장 안 함")
     dt.set_defaults(func=cmd_detect)
+
+    lb = sub.add_parser("label", help="④ 자동 라벨 생성: 디렉터리 탐지 -> COCO/YOLO")
+    lb.add_argument("image_dir", help="이미지 디렉터리")
+    lb.add_argument("query", nargs="?", help="자연어 질의 (예: '포트홀 찾아줘')")
+    lb.add_argument("--concepts", help="개념 직접 지정 (쉼표구분)")
+    lb.add_argument("--detector", help="탐지 백엔드 (mock/gemini)")
+    lb.add_argument("--format", choices=["coco", "yolo", "both"], default="both")
+    lb.add_argument("--min-conf", type=float, default=0.0, help="confidence 임계값(필터)")
+    lb.add_argument("--limit", type=int, default=0, help="처리 이미지 수 제한 (0=전체)")
+    lb.add_argument("--delay", type=float, default=0.0,
+                    help="이미지 간 대기(초). 무료 Gemini는 13 권장")
+    lb.set_defaults(func=cmd_label)
 
     cp = sub.add_parser("compare", help="여러 백엔드 비교 (정량 비교표 + JSON)")
     cp.add_argument("image_dir", help="이미지 디렉터리")

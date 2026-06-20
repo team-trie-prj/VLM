@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 from ..backends.base import image_size
 from ..schemas import Detection
@@ -15,7 +15,9 @@ class MockDetector(DetectorBackend):
     name = "mock"
     model = "mock-detector-v1"
 
-    def detect(self, image_path: str, concepts: List[str]) -> List[Detection]:
+    def detect(
+        self, image_path: str, concepts: List[str], mask_dir: Optional[str] = None
+    ) -> List[Detection]:  # mask_dir 미지원(박스만)
         w, h = image_size(image_path)
         w = w or 640
         h = h or 480
