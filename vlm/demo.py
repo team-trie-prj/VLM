@@ -28,16 +28,20 @@ _INTRO = (
 )
 
 
-def _run(image_path, query, detector_name):
+def _run(image_path, query, detector_name, conf=0.25):
     if not image_path:
         return None, [], "이미지를 올려주세요.", None
     try:
+        conf = float(conf)
         concepts = ["pothole"]
         if query and query.strip():
             cp = keyword_parse_query(query)
             concepts = cp.concepts or [query.strip()]
-        det = build_detector({"detector": detector_name})
-        dets = det.detect(image_path, concepts)
+        cfg = {"detector": detector_name}
+        if detector_name == "yolo":
+            cfg["yolo_conf"] = conf  # yolo는 모델 단계에서 임계값 적용
+        det = build_detector(cfg)
+        dets = [d for d in det.detect(image_path, concepts) if d.confidence >= conf]
 
         overlay = tempfile.mktemp(suffix=".png")
         if dets:
@@ -71,8 +75,10 @@ def build_demo():
             with gr.Column():
                 img = gr.Image(type="filepath", label="도로 이미지")
                 query = gr.Textbox(value="포트홀 찾아줘", label="질의")
-                detector = gr.Radio(["yolo", "gemini", "mock"], value="yolo",
-                                    label="탐지 모델")
+                detector = gr.Radio(["yolo", "gemini"], value="yolo",
+                                    label="탐지 모델 (yolo=파인튜닝·로컬, gemini=무료 API)")
+                conf = gr.Slider(0.05, 0.9, value=0.25, step=0.05,
+                                 label="신뢰도 임계값 (낮출수록 더 많이 탐지)")
                 btn = gr.Button("탐지", variant="primary")
             with gr.Column():
                 out_img = gr.Image(label="결과 (박스 오버레이)")
@@ -80,7 +86,7 @@ def build_demo():
                 table = gr.Dataframe(headers=["label", "confidence", "box"],
                                      label="탐지 결과", interactive=False)
                 coco = gr.File(label="COCO 라벨 다운로드")
-        btn.click(_run, [img, query, detector], [out_img, table, summary, coco])
+        btn.click(_run, [img, query, detector, conf], [out_img, table, summary, coco])
     return demo
 
 

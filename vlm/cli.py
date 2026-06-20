@@ -299,6 +299,7 @@ def cmd_eval(args) -> int:
 
 
 def cmd_demo(args) -> int:
+    load_config(args.config)  # .env 로드 (GEMINI_API_KEY 등이 데모에서 잡히도록)
     from .demo import build_demo
 
     build_demo().launch(
