@@ -93,3 +93,21 @@ def build_backend(config: Optional[Dict[str, Any]] = None) -> VLMBackend:
         f"알 수 없는 backend: {backend!r} "
         "(사용 가능: mock, anthropic, openai, gemini, qwen)"
     )
+
+
+def build_detector(config: Optional[Dict[str, Any]] = None):
+    """config에 따라 탐지 백엔드(파이프라인 ③) 인스턴스를 생성한다."""
+    cfg = config or load_config()
+    detector = str(cfg.get("detector", "gemini")).lower()
+
+    if detector == "mock":
+        from .detectors.mock import MockDetector
+
+        return MockDetector()
+
+    if detector == "gemini":
+        from .detectors.gemini import DEFAULT_MODEL, GeminiDetector
+
+        return GeminiDetector(model=cfg.get("detector_model") or DEFAULT_MODEL)
+
+    raise ValueError(f"알 수 없는 detector: {detector!r} (사용 가능: mock, gemini)")

@@ -10,6 +10,8 @@
 from .schemas import (
     ConceptPrompt,
     DamageInstance,
+    Detection,
+    DetectionResult,
     ImageAnalysis,
     PromptLog,
     Usage,
@@ -19,6 +21,8 @@ from .schemas import (
 __all__ = [
     "ConceptPrompt",
     "DamageInstance",
+    "Detection",
+    "DetectionResult",
     "ImageAnalysis",
     "PromptLog",
     "Usage",
