@@ -84,6 +84,24 @@ def cmd_vqa(args) -> int:
     return 0
 
 
+def cmd_compare(args) -> int:
+    from .compare import compare, format_report
+
+    cfg = load_config(args.config)  # .env 로드 + output_dir
+    names = [s.strip() for s in args.backends.split(",") if s.strip()]
+    report = compare(args.image_dir, names, delay=args.delay, limit=args.limit)
+
+    out_dir = Path(cfg.get("output_dir", "data/outputs"))
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out = out_dir / f"{args.name}.json"
+    out.write_text(
+        json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    print(format_report(report))
+    print(f"\n[saved] {out}")
+    return 0
+
+
 def cmd_doctor(args) -> int:
     """환경 진단: 패키지·키·백엔드 확인. --ping 시 실제 API 호출로 키 검증."""
     cfg = load_config(args.config)  # .env 로드 포함
@@ -174,6 +192,15 @@ def build_parser() -> argparse.ArgumentParser:
     q = sub.add_parser("query", help="자연어 질의 -> 탐지 개념 프롬프트")
     q.add_argument("text", help="질의문 (예: '포트홀 찾아줘')")
     q.set_defaults(func=cmd_query)
+
+    cp = sub.add_parser("compare", help="여러 백엔드 비교 (정량 비교표 + JSON)")
+    cp.add_argument("image_dir", help="이미지 디렉터리")
+    cp.add_argument("--backends", default="mock,gemini", help="쉼표구분 (예: mock,gemini)")
+    cp.add_argument("--delay", type=float, default=0.0,
+                    help="비-mock 백엔드 호출 간 대기(초). 무료 Gemini는 13 권장")
+    cp.add_argument("--limit", type=int, default=0, help="처리 이미지 수 제한 (0=전체)")
+    cp.add_argument("--name", default="comparison", help="출력 파일명")
+    cp.set_defaults(func=cmd_compare)
 
     v = sub.add_parser("vqa", help="이미지 질의응답")
     v.add_argument("image", help="이미지 경로")
