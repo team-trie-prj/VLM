@@ -45,6 +45,17 @@ python -m vlm query "도로 균열이랑 패임 표시해줘"
 python -m vlm info
 ```
 
+## 데모 UI (한 화면 시연)
+
+업로드 → "포트홀 찾아줘" → 탐지 박스 오버레이 + COCO 라벨 다운로드를 **한 화면**에서.
+제안서 앵커 시나리오 "포트홀 영역을 찾아줘"의 완성형 데모.
+
+```powershell
+pip install gradio
+python -m vlm demo            # http://127.0.0.1:7860 (--share 로 공개 링크)
+```
+탐지 모델 선택: `yolo`(파인튜닝·로컬·무료) / `gemini`(무료 API·키 필요) / `mock`(키 없이 테스트).
+
 ## 실제 추론으로 전환
 
 ### 권장: Gemini (무료 티어)
@@ -200,7 +211,8 @@ vlm/
   labels.py      # 탐지 → COCO/YOLO 라벨 변환 (④)
   review.py      # 검수 트리아지/수정 비교 (⑤, 자동확정률·수정 비율)
   overlay.py     # 탐지 결과 이미지 오버레이 (박스 + 분할 mask)
-  cli.py         # CLI (analyze/batch/query/vqa/detect/label/review/eval/compare/doctor)
+  demo.py        # Gradio 데모 UI (업로드→질의→탐지→오버레이)
+  cli.py         # CLI (analyze/batch/query/vqa/detect/label/review/eval/compare/demo/doctor)
   backends/      # VLM: mock / gemini / anthropic / openai / qwen
   detectors/     # 탐지: mock / gemini / yolo(파인튜닝 ⑥)
 config/default.yaml

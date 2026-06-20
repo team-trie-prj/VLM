@@ -9,6 +9,9 @@ python-dotenv>=1.0
 # anthropic     # Claude 비전 (messages.parse 구조화 출력). 최신 버전 권장
 # openai        # GPT-4o 비전
 
+# --- 데모 UI (선택) -------------------------------------------------------
+# gradio      # python -m vlm demo (업로드→질의→탐지→오버레이 시연)
+
 # --- 실제 데이터 확보 (선택) ----------------------------------------------
 # roboflow    # Roboflow Universe 도로손상 데이터셋 다운로드 (scripts/fetch_roboflow.py)
 
