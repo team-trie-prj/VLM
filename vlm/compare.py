@@ -73,7 +73,7 @@ def compare(
                 s["cost"] += u.estimated_cost_usd
             if "pothole" in types:
                 s["pothole"] += 1
-            if delay and n != "mock":  # mock은 한도/비용 없으니 페이싱 제외
+            if delay and n not in ("mock", "yolo"):  # 로컬 백엔드는 페이싱 불필요
                 time.sleep(delay)
         per_image.append(rec)
 

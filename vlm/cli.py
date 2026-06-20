@@ -266,6 +266,38 @@ def cmd_review(args) -> int:
     return 0
 
 
+def cmd_eval(args) -> int:
+    from .eval import eval_detector, load_yolo_gt
+
+    cfg = load_config(args.config)
+    if args.detector:
+        cfg["detector"] = args.detector
+    images_dir = Path(args.dataset) / "images"
+    labels_dir = Path(args.dataset) / "labels"
+    if not images_dir.is_dir() or not labels_dir.is_dir():
+        print(f"[실패] {args.dataset} 아래 images/ 와 labels/ 가 필요합니다.")
+        return 1
+    names = [s.strip() for s in args.names.split(",") if s.strip()]
+    concepts = [s.strip() for s in (args.concepts or args.names).split(",") if s.strip()]
+
+    gt = load_yolo_gt(images_dir, labels_dir, names)
+    det = build_detector(cfg)
+    rep, n = eval_detector(det, images_dir, gt, concepts,
+                           limit=args.limit, delay=args.delay)
+    tp, fp, fn = rep.matched, rep.removed_by_reviewer, rep.added_by_reviewer
+    print(f"평가: {n}장, detector={det.name} (model={det.model}), IoU>=0.5")
+    print(f"TP {tp} / FP {fp} / FN {fn}")
+    print(f"precision {rep.precision_vs_human * 100:.1f}% / "
+          f"recall {rep.recall_vs_human * 100:.1f}%")
+
+    out = Path(cfg.get("output_dir", "data/outputs")) / f"eval_{det.name}.json"
+    out.write_text(json.dumps(
+        {"detector": det.name, "model": det.model, "images": n, **rep.model_dump()},
+        ensure_ascii=False, indent=2), encoding="utf-8")
+    print(f"[saved] {out}")
+    return 0
+
+
 def cmd_doctor(args) -> int:
     """환경 진단: 패키지·키·백엔드 확인. --ping 시 실제 API 호출로 키 검증."""
     cfg = load_config(args.config)  # .env 로드 포함
@@ -386,6 +418,15 @@ def build_parser() -> argparse.ArgumentParser:
     rv.add_argument("--reviewed", help="report: 사람-수정 COCO 경로")
     rv.add_argument("--iou", type=float, default=0.5, help="report: 매칭 IoU 임계값")
     rv.set_defaults(func=cmd_review)
+
+    ev = sub.add_parser("eval", help="탐지기를 GT(YOLO 라벨) 대비 평가 (precision/recall)")
+    ev.add_argument("dataset", help="images/ 와 labels/ 가 있는 split 디렉터리")
+    ev.add_argument("--names", default="pothole", help="클래스명 (쉼표, index순)")
+    ev.add_argument("--concepts", help="탐지 개념 (기본=names)")
+    ev.add_argument("--detector", help="mock/gemini/yolo")
+    ev.add_argument("--limit", type=int, default=0, help="평가 이미지 수 제한 (0=전체)")
+    ev.add_argument("--delay", type=float, default=0.0, help="API 백엔드 페이싱(무료 Gemini 13)")
+    ev.set_defaults(func=cmd_eval)
 
     cp = sub.add_parser("compare", help="여러 백엔드 비교 (정량 비교표 + JSON)")
     cp.add_argument("image_dir", help="이미지 디렉터리")
