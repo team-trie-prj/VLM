@@ -155,6 +155,23 @@ python -m vlm compare data/images/real --backends gemini,yolo   # 파인튜닝 Y
 ```
 → `compare`로 모델 간/파인튜닝 전후 성능을 정량 비교 (제안서 "파인튜닝 전후 성능표").
 
+## 탐지기 평가 (eval) — GT 대비 precision/recall
+
+YOLO 데이터셋의 정답(GT) 라벨 기준으로 탐지기를 평가합니다(IoU≥0.5 매칭).
+
+```powershell
+python -m vlm eval data/roboflow/Pothole.v1-raw.yolov8/test --detector yolo
+python -m vlm eval data/roboflow/Pothole.v1-raw.yolov8/test --detector gemini --limit 15 --delay 13
+```
+
+실측 결과(test 15장) — **파인튜닝 효과 증명**:
+
+| 탐지기 | precision | recall |
+|---|---|---|
+| 파인튜닝 YOLO (mAP@0.5 0.79) | 59% | **74%** |
+| Gemini zero-shot | 26% | 23% |
+| COCO 사전학습 | ≈ 0 (pothole 클래스 없음) | — |
+
 ## 모델 비교 (compare)
 
 같은 이미지를 여러 백엔드로 돌려 **정량 비교표**(일치율·속도·비용·탐지율)를 만듭니다.
@@ -178,11 +195,12 @@ vlm/
   keywords.py    # 한글→영문 개념 매핑 + 규칙 기반 질의 파서
   config.py      # 설정 로딩 + 백엔드 팩토리
   pipeline.py    # 오케스트레이터 (단건/배치, 시간측정, prompt_log)
-  compare.py     # 백엔드 비교·검증 (정량 비교표)
+  compare.py     # VLM 백엔드 비교 (정량 비교표)
+  eval.py        # 탐지기 GT 평가 (precision/recall) — 모델 비교·검증
   labels.py      # 탐지 → COCO/YOLO 라벨 변환 (④)
   review.py      # 검수 트리아지/수정 비교 (⑤, 자동확정률·수정 비율)
   overlay.py     # 탐지 결과 이미지 오버레이 (박스 + 분할 mask)
-  cli.py         # CLI (analyze/batch/query/vqa/detect/label/review/compare/doctor/info)
+  cli.py         # CLI (analyze/batch/query/vqa/detect/label/review/eval/compare/doctor)
   backends/      # VLM: mock / gemini / anthropic / openai / qwen
   detectors/     # 탐지: mock / gemini / yolo(파인튜닝 ⑥)
 config/default.yaml
