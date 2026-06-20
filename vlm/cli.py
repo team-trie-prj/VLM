@@ -298,6 +298,15 @@ def cmd_eval(args) -> int:
     return 0
 
 
+def cmd_demo(args) -> int:
+    from .demo import build_demo
+
+    build_demo().launch(
+        server_name=args.host, server_port=args.port, share=args.share
+    )
+    return 0
+
+
 def cmd_doctor(args) -> int:
     """환경 진단: 패키지·키·백엔드 확인. --ping 시 실제 API 호출로 키 검증."""
     cfg = load_config(args.config)  # .env 로드 포함
@@ -441,6 +450,12 @@ def build_parser() -> argparse.ArgumentParser:
     v.add_argument("image", help="이미지 경로")
     v.add_argument("question", help="질문")
     v.set_defaults(func=cmd_vqa)
+
+    dm = sub.add_parser("demo", help="Gradio 데모 UI 실행 (업로드->질의->탐지->오버레이)")
+    dm.add_argument("--host", default="127.0.0.1")
+    dm.add_argument("--port", type=int, default=7860)
+    dm.add_argument("--share", action="store_true", help="공개 공유 링크 생성")
+    dm.set_defaults(func=cmd_demo)
 
     i = sub.add_parser("info", help="현재 설정/백엔드 확인")
     i.set_defaults(func=cmd_info)
