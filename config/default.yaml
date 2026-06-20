@@ -19,3 +19,6 @@ model: null
 
 max_tokens: 2048
 output_dir: data/outputs
+
+# 탐지·분할(파이프라인 ③) 백엔드: mock | gemini
+detector: gemini

@@ -118,6 +118,31 @@ class VLMResult(BaseModel):
         }
 
 
+class Detection(BaseModel):
+    """탐지·분할 1건 (파이프라인 ③). mask는 선택(분할)."""
+
+    label: str = Field(description="탐지된 개념 라벨 (예: pothole)")
+    box: List[int] = Field(description="[x0, y0, x1, y1] 픽셀 좌표")
+    confidence: float = Field(default=0.0, description="0~1 신뢰도(추정)")
+    mask_path: Optional[str] = Field(default=None, description="분할 마스크 PNG 경로(선택)")
+
+
+class DetectionResult(BaseModel):
+    """이미지 1장의 탐지 결과 레코드."""
+
+    image_id: str
+    image_path: str
+    width: Optional[int] = None
+    height: Optional[int] = None
+    concepts: List[str] = Field(default_factory=list)
+    detections: List[Detection] = Field(default_factory=list)
+    backend: str
+    model: str
+    latency_ms: Optional[float] = None
+    created_at: str
+    overlay_path: Optional[str] = None
+
+
 class PromptLog(BaseModel):
     """재현성·평가용 프롬프트 로그 (제안서 prompt_log)."""
 

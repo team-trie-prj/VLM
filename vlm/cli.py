@@ -17,7 +17,7 @@ import os
 import sys
 from pathlib import Path
 
-from .config import build_backend, load_config
+from .config import build_backend, build_detector, load_config
 from .pipeline import VLMProcessor
 
 
@@ -81,6 +81,64 @@ def cmd_query(args) -> int:
 def cmd_vqa(args) -> int:
     proc = _make_processor(args)
     print(proc.vqa(args.image, args.question))
+    return 0
+
+
+def cmd_detect(args) -> int:
+    import time
+    from datetime import datetime, timezone
+
+    from .backends.base import image_size
+    from .keywords import keyword_parse_query
+    from .overlay import draw_detections
+    from .schemas import DetectionResult
+
+    cfg = load_config(args.config)  # .env 로드 + output_dir
+    if args.detector:
+        cfg["detector"] = args.detector
+    if args.model:
+        cfg["detector_model"] = args.model
+
+    if args.concepts:
+        concepts = [c.strip() for c in args.concepts.split(",") if c.strip()]
+    elif args.query:
+        cp = keyword_parse_query(args.query)
+        concepts = cp.concepts or [args.query]
+    else:
+        concepts = ["pothole", "crack"]
+
+    det = build_detector(cfg)
+    w, h = image_size(args.image)
+    t0 = time.perf_counter()
+    detections = det.detect(args.image, concepts)
+    lat = (time.perf_counter() - t0) * 1000.0
+
+    out_dir = Path(cfg.get("output_dir", "data/outputs"))
+    out_dir.mkdir(parents=True, exist_ok=True)
+    image_id = Path(args.image).stem
+    overlay_path = None
+    if not args.no_overlay and detections:
+        overlay_path = str(out_dir / f"{image_id}_detected.png")
+        draw_detections(args.image, detections, overlay_path)
+
+    result = DetectionResult(
+        image_id=image_id, image_path=args.image, width=w, height=h,
+        concepts=concepts, detections=detections,
+        backend=det.name, model=det.model, latency_ms=round(lat, 1),
+        created_at=datetime.now(timezone.utc).isoformat(),
+        overlay_path=overlay_path,
+    )
+    out = out_dir / f"{image_id}_detect.json"
+    out.write_text(
+        json.dumps(result.model_dump(), ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    print(f"개념: {concepts}  ->  탐지 {len(detections)}건 "
+          f"(backend={det.name}, {lat:.0f}ms)")
+    for dn in detections:
+        print(f"  - {dn.label} {dn.confidence:.2f} box={dn.box}")
+    if overlay_path:
+        print(f"[overlay] {overlay_path}")
+    print(f"[saved] {out}")
     return 0
 
 
@@ -192,6 +250,14 @@ def build_parser() -> argparse.ArgumentParser:
     q = sub.add_parser("query", help="자연어 질의 -> 탐지 개념 프롬프트")
     q.add_argument("text", help="질의문 (예: '포트홀 찾아줘')")
     q.set_defaults(func=cmd_query)
+
+    dt = sub.add_parser("detect", help="탐지+분할(③): 질의/개념 -> bbox + 오버레이")
+    dt.add_argument("image", help="이미지 경로")
+    dt.add_argument("query", nargs="?", help="자연어 질의 (예: '포트홀 찾아줘')")
+    dt.add_argument("--concepts", help="개념 직접 지정 (쉼표구분, 질의보다 우선)")
+    dt.add_argument("--detector", help="탐지 백엔드 (mock/gemini)")
+    dt.add_argument("--no-overlay", action="store_true", help="오버레이 이미지 저장 안 함")
+    dt.set_defaults(func=cmd_detect)
 
     cp = sub.add_parser("compare", help="여러 백엔드 비교 (정량 비교표 + JSON)")
     cp.add_argument("image_dir", help="이미지 디렉터리")
