@@ -113,6 +113,7 @@ def build_detector(config: Optional[Dict[str, Any]] = None):
     if detector == "yolo":
         from .detectors.yolo import DEFAULT_WEIGHTS, YoloDetector
 
-        return YoloDetector(weights=cfg.get("yolo_weights") or DEFAULT_WEIGHTS)
+        return YoloDetector(weights=cfg.get("yolo_weights") or DEFAULT_WEIGHTS,
+                            conf=float(cfg.get("yolo_conf", 0.25)))
 
     raise ValueError(f"알 수 없는 detector: {detector!r} (사용 가능: mock, gemini, yolo)")
