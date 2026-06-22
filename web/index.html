@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>도로 손상 탐지 데모</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-dot"></span>
+      <span>도로 손상 탐지 데모</span>
+    </div>
+    <nav class="tabs">
+      <button class="tab active" data-view="detect">탐지</button>
+      <button class="tab" data-view="history">히스토리</button>
+    </nav>
+    <button id="theme-toggle" class="icon-btn" title="테마 전환">🌙 다크</button>
+  </header>
+
+  <!-- ============ 탐지 페이지 ============ -->
+  <main id="view-detect" class="container">
+    <!-- 입력 패널 -->
+    <section class="panel">
+      <h2 class="panel-title">입력</h2>
+
+      <label class="field-label">도로 이미지 입력</label>
+      <div id="dropzone" class="dropzone">
+        <img id="preview" class="preview" hidden>
+        <div id="dropzone-empty" class="dropzone-empty">
+          <div class="dz-icon">⬆</div>
+          <p>이미지를 끌어다 놓거나 <b>업로드</b></p>
+        </div>
+        <input id="file-input" type="file" accept="image/*" hidden>
+      </div>
+      <div class="row gap">
+        <button id="btn-upload" class="btn ghost">업로드</button>
+        <button id="btn-sample" class="btn ghost">샘플 복원</button>
+      </div>
+
+      <label class="field-label">자연어 질의</label>
+      <input id="query" class="text-input" value="포트홀 찾아줘"
+             placeholder="예) 포트홀과 균열 모두 찾아줘">
+
+      <label class="field-label">탐지 모델</label>
+      <div class="model-grid">
+        <label class="model-card">
+          <input type="radio" name="detector" value="yolo" checked>
+          <div class="mc-body"><div class="mc-name">YOLO 파인튜닝</div>
+            <div class="mc-sub">로컬 · 무료 · 무제한</div></div>
+        </label>
+        <label class="model-card">
+          <input type="radio" name="detector" value="gemini">
+          <div class="mc-body"><div class="mc-name">Gemini</div>
+            <div class="mc-sub">멀티모달 · 키 필요 · 5 RPM</div></div>
+        </label>
+      </div>
+
+      <label class="field-label">신뢰도 임계값 <span id="conf-val" class="pill">0.25</span></label>
+      <input id="conf" class="slider" type="range" min="0.05" max="0.9" step="0.05" value="0.25">
+      <p class="hint">낮출수록 더 많이 탐지</p>
+
+      <div class="row gap mt">
+        <button id="btn-run" class="btn primary">탐지 실행</button>
+        <button id="btn-reset" class="btn ghost">초기화</button>
+      </div>
+    </section>
+
+    <!-- 결과 패널 -->
+    <section class="panel">
+      <div class="panel-head">
+        <h2 class="panel-title">분석 결과</h2>
+        <button id="btn-export" class="btn ghost sm" disabled>내보내기 (COCO)</button>
+      </div>
+
+      <div id="state-empty" class="state">
+        <div class="state-icon">🔍</div>
+        <p>탐지 결과가 없습니다.</p>
+        <p class="muted">왼쪽에서 이미지를 선택하고 <b>탐지 실행</b>을 누르세요.</p>
+      </div>
+
+      <div id="state-loading" class="state" hidden>
+        <div class="spinner"></div>
+        <p>손상 영역 분석 중…</p>
+      </div>
+
+      <div id="state-threshold" class="state warn" hidden>
+        <div class="state-icon">⚠️</div>
+        <p>임계값이 너무 높습니다.</p>
+        <p class="muted">탐지된 항목이 모두 필터링되었습니다. 임계값을 낮춰보세요.</p>
+      </div>
+
+      <div id="state-error" class="state warn" hidden>
+        <div class="state-icon">⚠️</div>
+        <p id="error-msg">오류</p>
+      </div>
+
+      <div id="result" hidden>
+        <div class="stats">
+          <div class="stat"><div class="stat-num" id="st-count">0</div><div class="stat-lbl">탐지 건수</div></div>
+          <div class="stat"><div class="stat-num severe" id="st-severe">0</div><div class="stat-lbl">심각 건수</div></div>
+          <div class="stat"><div class="stat-num" id="st-avg">0%</div><div class="stat-lbl">평균 신뢰도</div></div>
+          <div class="stat"><div class="stat-num sm" id="st-model">-</div><div class="stat-lbl">분석 모델</div></div>
+        </div>
+
+        <label class="field-label">심각도 분포</label>
+        <div class="dist-bar" id="dist-bar">
+          <div class="dist severe" id="dist-severe"></div>
+          <div class="dist moderate" id="dist-moderate"></div>
+          <div class="dist minor" id="dist-minor"></div>
+        </div>
+        <div class="dist-legend">
+          <span><i class="dot severe"></i>심각 <b id="lg-severe">0</b></span>
+          <span><i class="dot moderate"></i>보통 <b id="lg-moderate">0</b></span>
+          <span><i class="dot minor"></i>경미 <b id="lg-minor">0</b></span>
+        </div>
+
+        <img id="result-img" class="result-img" hidden>
+
+        <table class="result-table">
+          <thead><tr><th>라벨</th><th>심각도</th><th>신뢰도</th><th>위치 (x,y,w,h)</th></tr></thead>
+          <tbody id="result-rows"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============ 히스토리 페이지 ============ -->
+  <main id="view-history" class="container single" hidden>
+    <section class="panel">
+      <div class="panel-head">
+        <h2 class="panel-title">탐지 히스토리</h2>
+        <button id="btn-clear-history" class="btn ghost sm">전체 삭제</button>
+      </div>
+      <p class="muted">이전에 분석한 도로 이미지와 결과입니다. 카드를 선택하면 결과를 다시 불러옵니다.</p>
+      <div id="history-grid" class="history-grid"></div>
+      <div id="history-empty" class="state"><p class="muted">아직 분석 기록이 없습니다.</p></div>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>
