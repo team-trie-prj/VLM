@@ -45,16 +45,24 @@ python -m vlm query "도로 균열이랑 패임 표시해줘"
 python -m vlm info
 ```
 
-## 데모 UI (한 화면 시연)
+## 데모 UI
 
-업로드 → "포트홀 찾아줘" → 탐지 박스 오버레이 + COCO 라벨 다운로드를 **한 화면**에서.
-제안서 앵커 시나리오 "포트홀 영역을 찾아줘"의 완성형 데모.
+### 커스텀 웹앱 (권장) — `python -m vlm web`
+다크 테마·탐지/히스토리 2페이지·심각도 분포·COCO 내보내기를 갖춘 정식 웹 데모
+(claude.ai/design 디자인 구현). 백엔드 FastAPI가 기존 탐지 파이프라인을 재사용.
 
 ```powershell
-pip install gradio
-python -m vlm demo            # http://127.0.0.1:7860 (--share 로 공개 링크)
+pip install fastapi uvicorn python-multipart
+python -m vlm web            # http://127.0.0.1:8000
 ```
-탐지 모델 선택: `yolo`(파인튜닝·로컬·무료) / `gemini`(무료 API·키 필요) / `mock`(키 없이 테스트).
+업로드/샘플 → 자연어 질의 → 모델(yolo/gemini) → 신뢰도 슬라이더 → 탐지 → 오버레이·표·심각도·COCO 다운로드. 히스토리는 브라우저(localStorage)에 저장.
+
+### 간편 데모 — `python -m vlm demo`
+```powershell
+pip install gradio
+python -m vlm demo            # Gradio, http://127.0.0.1:7860
+```
+탐지 모델: `yolo`(파인튜닝·로컬·무료) / `gemini`(무료 API·키 필요) / `mock`(키 없이).
 
 ## 실제 추론으로 전환
 
@@ -211,8 +219,10 @@ vlm/
   labels.py      # 탐지 → COCO/YOLO 라벨 변환 (④)
   review.py      # 검수 트리아지/수정 비교 (⑤, 자동확정률·수정 비율)
   overlay.py     # 탐지 결과 이미지 오버레이 (박스 + 분할 mask)
-  demo.py        # Gradio 데모 UI (업로드→질의→탐지→오버레이)
-  cli.py         # CLI (analyze/batch/query/vqa/detect/label/review/eval/compare/demo/doctor)
+  demo.py        # Gradio 간편 데모
+  web.py         # 커스텀 웹앱 백엔드 (FastAPI) — 디자인 구현
+  cli.py         # CLI (analyze/batch/query/vqa/detect/label/review/eval/compare/demo/web/doctor)
+web/   index.html · style.css · app.js   # 커스텀 웹 프론트엔드(다크 테마, 탐지/히스토리)
   backends/      # VLM: mock / gemini / anthropic / openai / qwen
   detectors/     # 탐지: mock / gemini / yolo(파인튜닝 ⑥)
 config/default.yaml
